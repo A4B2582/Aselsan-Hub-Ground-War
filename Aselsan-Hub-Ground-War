@@ -1,0 +1,1160 @@
+--!strict
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- --- ARKA PLAN OTOMATİK SİSTEMLER (AUTOMATIC BACKGROUND SYSTEMS) ---
+-- 1. Anti-Kick (Arka Planda Sürekli Aktif)
+pcall(function()
+	local mt = getrawmetatable(game)
+	setreadonly(mt, false)
+	local oldNamecall = mt.__namecall
+	mt.__namecall = newcclosure(function(self, ...)
+		local method = getnamecallmethod()
+		if method == "Kick" or method == "kick" then
+			if self == player then
+				return
+			end
+		end
+		return oldNamecall(self, ...)
+	end)
+	setreadonly(mt, true)
+end)
+
+-- 2. Anti-Ban / AFK (Arka Planda Sürekli Aktif)
+pcall(function()
+	player.Idled:Connect(function()
+		VirtualUser:CaptureController()
+		VirtualUser:ClickButton2(Vector2.new(0, 0))
+	end)
+end)
+
+-- Eski kalıntıları temizle
+if playerGui:FindFirstChild("AselsanHubFixed") then
+	playerGui.AselsanHubFixed:Destroy()
+end
+
+local rgbTextParts = {}
+
+-- 1. Ana Ekran
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AselsanHubFixed"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = playerGui
+
+-- Hub'ı Açma / Kapatma (Toggle) Butonu (Sağ en üst köşe)
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ToggleHubButton"
+toggleBtn.Size = UDim2.new(0, 110, 0, 36)
+toggleBtn.Position = UDim2.new(1, -125, 0, 15)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Text = "ASELSAN HUB"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextSize = 12
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Active = true
+toggleBtn.Draggable = true
+toggleBtn.Parent = screenGui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 6)
+toggleCorner.Parent = toggleBtn
+
+table.insert(rgbTextParts, toggleBtn)
+
+-- 2. RGB Dış Çerçeve
+local outerFrame = Instance.new("Frame")
+outerFrame.Name = "OuterFrame"
+outerFrame.Size = UDim2.new(0, 484, 0, 384)
+outerFrame.Position = UDim2.new(0.5, -242, 0.5, -192)
+outerFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+outerFrame.BorderSizePixel = 0
+outerFrame.Parent = screenGui
+
+local outerCorner = Instance.new("UICorner")
+outerCorner.CornerRadius = UDim.new(0, 8)
+outerCorner.Parent = outerFrame
+
+local outerGradient = Instance.new("UIGradient")
+outerGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+	ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 255, 0)),
+	ColorSequenceKeypoint.new(0.4, Color3.fromRGB(0, 255, 0)),
+	ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 255, 255)),
+	ColorSequenceKeypoint.new(0.8, Color3.fromRGB(0, 0, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 255))
+})
+outerGradient.Parent = outerFrame
+
+local hubVisible = true
+toggleBtn.MouseButton1Click:Connect(function()
+	hubVisible = not hubVisible
+	outerFrame.Visible = hubVisible
+end)
+
+-- 3. Ana İç Pencere
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 480, 0, 380)
+mainFrame.Position = UDim2.new(0, 2, 0, 2)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Active = true
+mainFrame.Parent = outerFrame
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 6)
+mainCorner.Parent = mainFrame
+
+-- 4. Üst Bar
+local topBar = Instance.new("Frame")
+topBar.Size = UDim2.new(1, 0, 0, 32)
+topBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+topBar.BorderSizePixel = 0
+topBar.Parent = mainFrame
+
+local dragging = false
+local dragInput, dragStart, startPos
+
+topBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = outerFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		outerFrame.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -70, 1, 0)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "ASELSAN HUB | Ground War FPS System"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 13
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = topBar
+
+table.insert(rgbTextParts, titleLabel)
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 26, 0, 26)
+closeBtn.Position = UDim2.new(1, -30, 0, 3)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+closeBtn.BorderSizePixel = 0
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextSize = 12
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = topBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 4)
+closeCorner.Parent = closeBtn
+
+closeBtn.MouseButton1Click:Connect(function()
+	screenGui:Destroy()
+end)
+
+local container = Instance.new("Frame")
+container.Size = UDim2.new(0, 350, 1, -32)
+container.Position = UDim2.new(0, 0, 0, 32)
+container.BackgroundTransparency = 1
+container.ClipsDescendants = true
+container.Parent = mainFrame
+
+local sidebar = Instance.new("ScrollingFrame")
+sidebar.Size = UDim2.new(0, 130, 1, -32)
+sidebar.Position = UDim2.new(1, -130, 0, 32)
+sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+sidebar.BorderSizePixel = 0
+sidebar.CanvasSize = UDim2.new(0, 0, 0, 250)
+sidebar.ScrollBarThickness = 2
+sidebar.Parent = mainFrame
+
+local sidebarLayout = Instance.new("UIListLayout")
+sidebarLayout.Padding = UDim.new(0, 5)
+sidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+sidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+sidebarLayout.Parent = sidebar
+
+local pages = {}
+
+local function addPage(name)
+	local page = Instance.new("ScrollingFrame")
+	page.Size = UDim2.new(1, 0, 1, 0)
+	page.BackgroundTransparency = 1
+	page.BorderSizePixel = 0
+	page.CanvasSize = UDim2.new(0, 0, 0, 500)
+	page.ScrollBarThickness = 4
+	page.ClipsDescendants = true
+	page.Visible = false
+	page.Parent = container
+	
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 6)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = page
+	
+	pages[name] = page
+	return page
+end
+
+local function selectPage(name)
+	for pName, pObj in pairs(pages) do
+		pObj.Visible = (pName == name)
+	end
+end
+
+local function addTab(order, text, pageName)
+	local tab = Instance.new("TextButton")
+	tab.LayoutOrder = order
+	tab.Size = UDim2.new(0.9, 0, 0, 32)
+	tab.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	tab.BorderSizePixel = 0
+	tab.Text = text
+	tab.TextColor3 = Color3.fromRGB(255, 255, 255)
+	tab.TextSize = 12
+	tab.Font = Enum.Font.GothamBold
+	tab.Parent = sidebar
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 4)
+	corner.Parent = tab
+	
+	table.insert(rgbTextParts, tab)
+	
+	tab.MouseButton1Click:Connect(function()
+		selectPage(pageName)
+		titleLabel.Text = "ASELSAN HUB | " .. text
+	end)
+end
+
+local function addButton(page, text, callback)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0.92, 0, 0, 32)
+	btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	btn.BorderSizePixel = 0
+	btn.Text = text
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.TextSize = 12
+	btn.Font = Enum.Font.GothamBold
+	btn.Parent = page
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 4)
+	corner.Parent = btn
+	
+	table.insert(rgbTextParts, btn)
+	btn.MouseButton1Click:Connect(callback)
+	return btn
+end
+
+local function addTextBox(page, placeholder, defaultVal)
+	local box = Instance.new("TextBox")
+	box.Size = UDim2.new(0.92, 0, 0, 32)
+	box.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	box.BorderSizePixel = 0
+	box.Text = defaultVal
+	box.PlaceholderText = placeholder
+	box.TextColor3 = Color3.fromRGB(255, 255, 255)
+	box.TextSize = 12
+	box.Font = Enum.Font.GothamBold
+	box.Parent = page
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 4)
+	corner.Parent = box
+	
+	table.insert(rgbTextParts, box)
+	return box
+end
+
+-- --- SAYFALAR ---
+
+local pHome = addPage("Anasayfa")
+local infoLbl = Instance.new("TextLabel")
+infoLbl.Size = UDim2.new(0.92, 0, 0, 110)
+infoLbl.BackgroundTransparency = 1
+infoLbl.Text = "Oyun: Ground War / Var (FPS)\nYapımcı: qmiracxws\nDurum: Anti-Cheat Anti-Kick & Enemy Team ESP/Aimbot Aktif."
+infoLbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+infoLbl.TextSize = 12
+infoLbl.Font = Enum.Font.Gotham
+infoLbl.TextWrapped = true
+infoLbl.Parent = pHome
+
+local pMain = addPage("Main")
+
+local wsBox = addTextBox(pMain, "Hız Değeri", "50")
+local speedEnabled = false
+local speedConn = nil
+local speedBtn
+speedBtn = addButton(pMain, "WalkSpeed (Bypass) (Kapalı)", function()
+	speedEnabled = not speedEnabled
+	if speedEnabled then
+		speedBtn.Text = "WalkSpeed (Bypass) (Açık)"
+		if speedConn then speedConn:Disconnect() end
+		speedConn = RunService.RenderStepped:Connect(function(dt)
+			if not speedEnabled then return end
+			local char = player.Character
+			if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") then
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				local hrp = char.HumanoidRootPart
+				if hum.MoveDirection.Magnitude > 0 then
+					local spd = tonumber(wsBox.Text) or 50
+					hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (spd * dt))
+				end
+			end
+		end)
+	else
+		speedBtn.Text = "WalkSpeed (Bypass) (Kapalı)"
+		if speedConn then
+			speedConn:Disconnect()
+			speedConn = nil
+		end
+	end
+end)
+
+local flyBox = addTextBox(pMain, "Fly Hızı", "50")
+local flying = false
+local flyConn, bv, bg
+local flyBtn
+
+flyBtn = addButton(pMain, "Fly (Kapalı)", function()
+	flying = not flying
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then
+		flying = false
+		return
+	end
+	local hrp = char.HumanoidRootPart
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	
+	if flying then
+		flyBtn.Text = "Fly (Açık)"
+		
+		bv = Instance.new("BodyVelocity")
+		bv.Velocity = Vector3.new(0, 0, 0)
+		bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		bv.Parent = hrp
+		
+		bg = Instance.new("BodyGyro")
+		bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+		bg.CFrame = hrp.CFrame
+		bg.Parent = hrp
+
+		flyConn = RunService.RenderStepped:Connect(function()
+			if flying and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+				local currentHum = player.Character:FindFirstChildOfClass("Humanoid")
+				local cam = Workspace.CurrentCamera
+				local spd = tonumber(flyBox.Text) or 50
+				
+				if currentHum then
+					pcall(function()
+						currentHum:ChangeState(Enum.HumanoidStateType.PlatformStand)
+						for _, track in pairs(currentHum:GetPlayingAnimationTracks()) do
+							track:Stop(0)
+						end
+					end)
+				end
+				
+				local moveDirection = Vector3.new(0, 0, 0)
+				
+				if currentHum and currentHum.MoveDirection.Magnitude > 0 then
+					moveDirection = currentHum.MoveDirection
+					local camLookY = cam.CFrame.LookVector.Y
+					if math.abs(camLookY) > 0.25 then
+						moveDirection = Vector3.new(moveDirection.X, camLookY * 1.5, moveDirection.Z)
+					end
+				else
+					if UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.Up) then
+						moveDirection = moveDirection + cam.CFrame.LookVector
+					end
+					if UserInputService:IsKeyDown(Enum.KeyCode.S) or UserInputService:IsKeyDown(Enum.KeyCode.Down) then
+						moveDirection = moveDirection - cam.CFrame.LookVector
+					end
+					if UserInputService:IsKeyDown(Enum.KeyCode.D) or UserInputService:IsKeyDown(Enum.KeyCode.Right) then
+						moveDirection = moveDirection + cam.CFrame.RightVector
+					end
+					if UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.Left) then
+						moveDirection = moveDirection - cam.CFrame.RightVector
+					end
+				end
+				
+				if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+					moveDirection = moveDirection + Vector3.new(0, 1, 0)
+				end
+				if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+					moveDirection = moveDirection - Vector3.new(0, 1, 0)
+				end
+				
+				bv.Velocity = moveDirection * spd
+				local camCF = cam.CFrame
+				bg.CFrame = CFrame.new(camCF.Position, camCF.Position + Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z))
+			end
+		end)
+	else
+		flyBtn.Text = "Fly (Kapalı)"
+		if flyConn then flyConn:Disconnect() end
+		if bv then bv:Destroy() end
+		if bg then bg:Destroy() end
+		if hum then
+			pcall(function()
+				hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+			end)
+		end
+	end
+end)
+
+local noclipEnabled = false
+local noclipConn
+local noclipBtn
+noclipBtn = addButton(pMain, "Noclip (Duvar Geçme) (Kapalı)", function()
+	noclipEnabled = not noclipEnabled
+	if noclipEnabled then
+		noclipBtn.Text = "Noclip (Duvar Geçme) (Açık)"
+		noclipConn = RunService.Stepped:Connect(function()
+			if noclipEnabled and player.Character then
+				for _, part in pairs(player.Character:GetDescendants()) do
+					if part:IsA("BasePart") then part.CanCollide = false end
+				end
+			end
+		end)
+	else
+		noclipBtn.Text = "Noclip (Duvar Geçme) (Kapalı)"
+		if noclipConn then noclipConn:Disconnect() end
+	end
+end)
+
+local tpTargetBox = addTextBox(pMain, "Oyuncu Adı (Tam/Kısmi)", "")
+addButton(pMain, "Oyuncuya Işınlan", function()
+	local targetName = string.lower(tpTargetBox.Text)
+	local targetChar = nil
+	for _, otherPlayer in pairs(Players:GetPlayers()) do
+		if otherPlayer ~= player then
+			if string.find(string.lower(otherPlayer.Name), targetName) or (otherPlayer.DisplayName and string.find(string.lower(otherPlayer.DisplayName), targetName)) then
+				if otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+					targetChar = otherPlayer.Character
+					break
+				end
+			end
+		end
+	end
+	if targetChar and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+		player.Character.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+	end
+end)
+
+-- --- FARM ---
+local pFarm = addPage("Farm")
+
+local function safeTeleport(destinationCFrame)
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	local hrp = char.HumanoidRootPart
+	
+	local startPos = hrp.Position
+	local endPos = destinationCFrame.Position
+	local distance = (endPos - startPos).Magnitude
+	
+	if distance < 30 then
+		hrp.CFrame = destinationCFrame
+		return
+	end
+	
+	local steps = math.clamp(math.floor(distance / 25), 5, 25)
+	for i = 1, steps do
+		local alpha = i / steps
+		local interpolatedPos = startPos:Lerp(endPos, alpha)
+		hrp.CFrame = CFrame.new(interpolatedPos)
+		task.wait(0.01)
+	end
+	hrp.CFrame = destinationCFrame
+end
+
+local function getSafesList()
+	local list = {}
+	for _, obj in pairs(Workspace:GetDescendants()) do
+		local nameLower = string.lower(obj.Name)
+		if nameLower == "safe" or string.find(nameLower, "kasa") or string.find(nameLower, "safebox") then
+			local pos = nil
+			if obj:IsA("Model") then
+				pcall(function() pos = obj:GetPivot().Position end)
+			elseif obj:IsA("BasePart") then
+				pos = obj.Position
+			end
+			if pos then
+				local isUnique = true
+				for _, existingPos in pairs(list) do
+					if (existingPos - pos).Magnitude < 6 then
+						isUnique = false
+						break
+					end
+				end
+				if isUnique then table.insert(list, pos) end
+			end
+		end
+	end
+	for i = #list, 2, -1 do
+		local j = math.random(i)
+		list[i], list[j] = list[j], list[i]
+	end
+	return list
+end
+
+local safeIndex = 1
+local safeBtn = addButton(pFarm, "Kasa Teleport (Rastgele Sıralı)", function()
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	local safes = getSafesList()
+	if #safes > 0 then
+		if safeIndex > #safes then safeIndex = 1 end
+		local targetPos = safes[safeIndex]
+		if targetPos then
+			safeTeleport(CFrame.new(targetPos + Vector3.new(0, 3, 0)))
+			safeBtn.Text = string.format("Kasa TP (%d/%d Işınlandı)", safeIndex, #safes)
+			safeIndex = safeIndex + 1
+		end
+	else
+		safeBtn.Text = "Haritada Kasa Bulunamadı!"
+	end
+end)
+
+local function getAtmsList()
+	local list = {}
+	for _, obj in pairs(Workspace:GetDescendants()) do
+		local nameLower = string.lower(obj.Name)
+		if string.find(nameLower, "atm") then
+			local pos = nil
+			if obj:IsA("Model") then
+				pcall(function() pos = obj:GetPivot().Position end)
+			elseif obj:IsA("BasePart") then
+				pos = obj.Position
+			end
+			if pos then
+				local isUnique = true
+				for _, existingPos in pairs(list) do
+					if (existingPos - pos).Magnitude < 6 then
+						isUnique = false
+						break
+					end
+				end
+				if isUnique then table.insert(list, pos) end
+			end
+		end
+	end
+	for i = #list, 2, -1 do
+		local j = math.random(i)
+		list[i], list[j] = list[j], list[i]
+	end
+	return list
+end
+
+local atmIndex = 1
+local atmBtn = addButton(pFarm, "ATM Teleport (Rastgele Sıralı)", function()
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	local atms = getAtmsList()
+	if #atms > 0 then
+		if atmIndex > #atms then atmIndex = 1 end
+		local targetPos = atms[atmIndex]
+		if targetPos then
+			safeTeleport(CFrame.new(targetPos + Vector3.new(0, 3, 0)))
+			atmBtn.Text = string.format("ATM TP (%d/%d Işınlandı)", atmIndex, #atms)
+			atmIndex = atmIndex + 1
+		end
+	else
+		atmBtn.Text = "Haritada ATM Bulunamadı!"
+	end
+end)
+
+addButton(pFarm, "Kasa/ATM Listesini Sıfırla/Yenile", function()
+	local safes = getSafesList()
+	local atms = getAtmsList()
+	safeIndex = 1
+	atmIndex = 1
+	safeBtn.Text = string.format("Kasa Teleport (%d Kasa Bulundu)", #safes)
+	atmBtn.Text = string.format("ATM Teleport (%d ATM Bulundu)", #atms)
+end)
+
+-- --- ORTAK TAKIM KONTROLÜ (Ground War Team Check) ---
+local function isEnemy(otherPlayer)
+	if not otherPlayer or otherPlayer == player then return false end
+	
+	if player.Team ~= nil and otherPlayer.Team ~= nil then
+		if player.Team == otherPlayer.Team then
+			return false
+		end
+	end
+	
+	if player.TeamColor ~= nil and otherPlayer.TeamColor ~= nil then
+		if player.TeamColor == otherPlayer.TeamColor then
+			return false
+		end
+	end
+	
+	local pTeamVal = player:FindFirstChild("Team") or player:FindFirstChild("TeamValue")
+	local oTeamVal = otherPlayer:FindFirstChild("Team") or otherPlayer:FindFirstChild("TeamValue")
+	if pTeamVal and oTeamVal and pTeamVal.Value == oTeamVal.Value then
+		return false
+	end
+
+	return true
+end
+
+-- Ground War Uyumlu Can Tespiti Fonksiyonu
+local function getGroundWarHealth(otherPlayer)
+	local char = otherPlayer.Character
+	if not char then return 0, 100 end
+	
+	-- 1. Yöntem: Standart Roblox Humanoid
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		return math.floor(hum.Health), math.floor(hum.MaxHealth)
+	end
+	
+	-- 2. Yöntem: Ground War Özel Health / HP Nesneleri (Value)
+	local hpVal = char:FindFirstChild("Health") or char:FindFirstChild("HP") or otherPlayer:FindFirstChild("Health") or otherPlayer:FindFirstChild("HP")
+	local maxHpVal = char:FindFirstChild("MaxHealth") or char:FindFirstChild("MaxHP") or otherPlayer:FindFirstChild("MaxHealth") or otherPlayer:FindFirstChild("MaxHP")
+	
+	if hpVal and hpVal:IsA("ValueBase") then
+		local currentHp = math.floor(tonumber(hpVal.Value) or 0)
+		local maxHp = maxHpVal and maxHpVal:IsA("ValueBase") and math.floor(tonumber(maxHpVal.Value) or 100) or 100
+		return currentHp, maxHp
+	end
+	
+	return 100, 100
+end
+
+-- --- GROUND WAR OYUNUNA ÖZEL DÜŞMAN ESP (ENEMY ONLY ESP) ---
+local pEsp = addPage("ESP")
+local espEnabled = false
+local espBtn
+local espConnections = {}
+local espUpdateConn = nil
+
+local function removeEspFromChar(char)
+	if not char then return end
+	local hl = char:FindFirstChild("AselsanHighlight")
+	if hl then hl:Destroy() end
+	local gui = char:FindFirstChild("AselsanEspGui")
+	if gui then gui:Destroy() end
+end
+
+local function applyEsp(otherPlayer)
+	if not isEnemy(otherPlayer) then
+		if otherPlayer.Character then removeEspFromChar(otherPlayer.Character) end
+		return
+	end
+	
+	local char = otherPlayer.Character
+	if not char then return end
+	
+	if not char:FindFirstChild("AselsanHighlight") then
+		local hl = Instance.new("Highlight")
+		hl.Name = "AselsanHighlight"
+		hl.Adornee = char
+		hl.FillColor = Color3.fromRGB(255, 30, 30)
+		hl.FillTransparency = 0.4
+		hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+		hl.OutlineTransparency = 0
+		hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		hl.Parent = char
+	end
+	
+	local head = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+	if head and not char:FindFirstChild("AselsanEspGui") then
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = "AselsanEspGui"
+		billboard.Adornee = head
+		billboard.Size = UDim2.new(0, 120, 0, 45)
+		billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+		billboard.AlwaysOnTop = true
+		billboard.Parent = char
+		
+		local layout = Instance.new("UIListLayout")
+		layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Padding = UDim.new(0, 2)
+		layout.Parent = billboard
+		
+		local nameLbl = Instance.new("TextLabel")
+		nameLbl.Name = "NameLabel"
+		nameLbl.LayoutOrder = 1
+		nameLbl.Size = UDim2.new(1, 0, 0, 16)
+		nameLbl.BackgroundTransparency = 1
+		nameLbl.Text = otherPlayer.Name
+		nameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+		nameLbl.TextStrokeTransparency = 0
+		nameLbl.TextSize = 12
+		nameLbl.Font = Enum.Font.GothamBold
+		nameLbl.Parent = billboard
+
+		local curHp, maxHp = getGroundWarHealth(otherPlayer)
+		local hpLbl = Instance.new("TextLabel")
+		hpLbl.Name = "HpLabel"
+		hpLbl.LayoutOrder = 2
+		hpLbl.Size = UDim2.new(1, 0, 0, 14)
+		hpLbl.BackgroundTransparency = 1
+		hpLbl.Text = string.format("HP: %d/%d", curHp, maxHp)
+		hpLbl.TextColor3 = Color3.fromRGB(0, 255, 100) -- Yeşil renk
+		hpLbl.TextStrokeTransparency = 0
+		hpLbl.TextSize = 11
+		hpLbl.Font = Enum.Font.GothamBold
+		hpLbl.Parent = billboard
+	end
+end
+
+espBtn = addButton(pEsp, "Enemy ESP (Karşı Takım) (Kapalı)", function()
+	espEnabled = not espEnabled
+	if espEnabled then
+		espBtn.Text = "Enemy ESP (Karşı Takım) (Açık)"
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= player then
+				if p.Character then applyEsp(p) end
+				espConnections[p] = p.CharacterAdded:Connect(function(newChar)
+					newChar:WaitForChild("HumanoidRootPart", 5)
+					if espEnabled then
+						task.wait(0.5)
+						applyEsp(p)
+					end
+				end)
+			end
+		end
+		table.insert(espConnections, Players.PlayerAdded:Connect(function(p)
+			if p ~= player then
+				espConnections[p] = p.CharacterAdded:Connect(function(newChar)
+					newChar:WaitForChild("HumanoidRootPart", 5)
+					if espEnabled then
+						task.wait(0.5)
+						applyEsp(p)
+					end
+				end)
+			end
+		end))
+		
+		-- Can Durumunu Arka Planda Güncelleyen Döngü
+		espUpdateConn = RunService.RenderStepped:Connect(function()
+			if not espEnabled then return end
+			for _, p in pairs(Players:GetPlayers()) do
+				if p ~= player and isEnemy(p) and p.Character then
+					local gui = p.Character:FindFirstChild("AselsanEspGui")
+					if gui then
+						local hpLbl = gui:FindFirstChild("HpLabel")
+						if hpLbl and hpLbl:IsA("TextLabel") then
+							local curHp, maxHp = getGroundWarHealth(p)
+							hpLbl.Text = string.format("HP: %d/%d", curHp, maxHp)
+						end
+					end
+				end
+			end
+		end)
+	else
+		espBtn.Text = "Enemy ESP (Karşı Takım) (Kapalı)"
+		if espUpdateConn then
+			espUpdateConn:Disconnect()
+			espUpdateConn = nil
+		end
+		for _, p in pairs(Players:GetPlayers()) do
+			if p.Character then
+				removeEspFromChar(p.Character)
+			end
+		end
+		for _, conn in pairs(espConnections) do
+			if typeof(conn) == "RBXScriptConnection" then
+				conn:Disconnect()
+			end
+		end
+		espConnections = {}
+	end
+end)
+
+-- --- TP SEKME ---
+local pTp = addPage("Tp")
+
+local function getGunShopsList()
+	local list = {}
+	for _, obj in pairs(Workspace:GetDescendants()) do
+		local nameLower = string.lower(obj.Name)
+		if string.find(nameLower, "gun") or string.find(nameLower, "silah") or string.find(nameLower, "weapon") or string.find(nameLower, "shop") or string.find(nameLower, "ammu") then
+			local pos = nil
+			if obj:IsA("Model") then
+				pcall(function() pos = obj:GetPivot().Position end)
+			elseif obj:IsA("BasePart") then
+				pos = obj.Position
+			end
+			if pos then
+				local isUnique = true
+				for _, existing in pairs(list) do
+					if (existing - pos).Magnitude < 10 then
+						isUnique = false
+						break
+					end
+				end
+				if isUnique then table.insert(list, pos) end
+			end
+		end
+	end
+	return list
+end
+
+local gunShopBtn = addButton(pTp, "Gun Shop / Silahcı TP", function()
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	local gunShops = getGunShopsList()
+	if #gunShops > 0 then
+		local targetPos = gunShops[math.random(1, #gunShops)]
+		safeTeleport(CFrame.new(targetPos + Vector3.new(0, 3, 0)))
+		gunShopBtn.Text = "Gun Shop / Silahcı TP (Işınlandı)"
+	else
+		gunShopBtn.Text = "Gun Shop Bulunamadı!"
+	end
+end)
+
+local vakifBtn = addButton(pTp, "Vakıf Bank İçi TP", function()
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	local targetCF = nil
+	for _, obj in pairs(Workspace:GetDescendants()) do
+		local nameLower = string.lower(obj.Name)
+		if string.find(nameLower, "vakıf") or string.find(nameLower, "vakif") then
+			if obj:IsA("Model") then
+				pcall(function() targetCF = obj:GetPivot() end)
+			elseif obj:IsA("BasePart") then
+				targetCF = obj.CFrame
+			end
+			if targetCF then break end
+		end
+	end
+	if targetCF then
+		safeTeleport(targetCF + targetCF.LookVector * 4 + Vector3.new(0, 3, 0))
+		vakifBtn.Text = "Vakıf Bank İçi TP (Işınlandı)"
+	else
+		vakifBtn.Text = "VakıfBank Bulunamadı!"
+	end
+end)
+
+local guvenBtn = addButton(pTp, "Güven Bank İçi TP", function()
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	local targetCF = nil
+	for _, obj in pairs(Workspace:GetDescendants()) do
+		if obj then
+			local nameLower = string.lower(obj.Name)
+			if string.find(nameLower, "güven") or string.find(nameLower, "guven") then
+				pcall(function()
+					if obj:IsA("Model") then targetCF = obj:GetPivot()
+					elseif obj:IsA("BasePart") then targetCF = obj.CFrame end
+				end)
+				if targetCF then break end
+			end
+		end
+	end
+	if not targetCF then
+		for _, obj in pairs(Workspace:GetDescendants()) do
+			if obj then
+				local nameLower = string.lower(obj.Name)
+				if string.find(nameLower, "bank") or string.find(nameLower, "ziraat") or string.find(nameLower, "merkez") then
+					pcall(function()
+						if obj:IsA("Model") then targetCF = obj:GetPivot()
+						elseif obj:IsA("BasePart") then targetCF = obj.CFrame end
+					end)
+					if targetCF then break end
+				end
+			end
+		end
+	end
+	if targetCF then
+		safeTeleport(targetCF + targetCF.LookVector * 4 + Vector3.new(0, 3, 0))
+		guvenBtn.Text = "Güven Bank (Işınlandı!)"
+		task.delay(1.5, function() guvenBtn.Text = "Güven Bank İçi TP" end)
+	else
+		guvenBtn.Text = "Güven Bank Bulunamadı!"
+		task.delay(1.5, function() guvenBtn.Text = "Güven Bank İçi TP" end)
+	end
+end)
+
+-- --- HITBOX VE HEAD AIMBOT SEKME ---
+local pHitbox = addPage("Hitbox")
+
+local hitboxSizeBox = addTextBox(pHitbox, "Hitbox Boyutu (Örn: 5)", "5")
+local hitboxActive = false
+local hitboxBtn
+
+hitboxBtn = addButton(pHitbox, "Hitbox Büyüt (Kapalı)", function()
+	hitboxActive = not hitboxActive
+	if hitboxActive then
+		hitboxBtn.Text = "Hitbox Büyüt (Açık)"
+	else
+		hitboxBtn.Text = "Hitbox Büyüt (Kapalı)"
+		for _, otherPlayer in pairs(Players:GetPlayers()) do
+			if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+				local hrp = otherPlayer.Character.HumanoidRootPart
+				hrp.Size = Vector3.new(2, 2, 1)
+				hrp.Transparency = 1
+				hrp.CanCollide = false
+				local hl = otherPlayer.Character:FindFirstChild("AselsanHitboxHighlight")
+				if hl then hl:Destroy() end
+			end
+		end
+	end
+end)
+
+local hitbox2SizeBox = addTextBox(pHitbox, "Hitbox 2 Boyutu (Örn: 7)", "7")
+local hitbox2Active = false
+local hitbox2Btn
+
+hitbox2Btn = addButton(pHitbox, "Hitbox 2 (Alternatif) (Kapalı)", function()
+	hitbox2Active = not hitbox2Active
+	if hitbox2Active then
+		hitbox2Btn.Text = "Hitbox 2 (Alternatif) (Açık)"
+	else
+		hitbox2Btn.Text = "Hitbox 2 (Alternatif) (Kapalı)"
+		for _, otherPlayer in pairs(Players:GetPlayers()) do
+			if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("Head") then
+				local head = otherPlayer.Character.Head
+				head.Size = Vector3.new(2, 1, 1)
+				head.Transparency = 0
+				head.CanCollide = true
+				head.CanQuery = true
+				local hl2 = otherPlayer.Character:FindFirstChild("AselsanHitbox2Highlight")
+				if hl2 then hl2:Destroy() end
+			end
+		end
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	if hitboxActive then
+		local sizeVal = tonumber(hitboxSizeBox.Text) or 5
+		for _, otherPlayer in pairs(Players:GetPlayers()) do
+			if otherPlayer ~= player and otherPlayer.Character then
+				local char = otherPlayer.Character
+				local hrp = char:FindFirstChild("HumanoidRootPart")
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				
+				if hrp and hum then
+					if not isEnemy(otherPlayer) or hum.Sit or hum.SeatPart ~= nil then
+						hrp.Size = Vector3.new(2, 2, 1)
+						hrp.Transparency = 1
+						hrp.CanCollide = false
+						local hl = char:FindFirstChild("AselsanHitboxHighlight")
+						if hl then hl:Destroy() end
+					else
+						hrp.Size = Vector3.new(sizeVal, sizeVal, sizeVal)
+						hrp.Transparency = 0.5
+						hrp.Color = Color3.fromRGB(255, 0, 0)
+						hrp.Material = Enum.Material.ForceField
+						hrp.CanCollide = false
+						hrp.CanQuery = true
+						
+						if not char:FindFirstChild("AselsanHitboxHighlight") then
+							local hbHighlight = Instance.new("Highlight")
+							hbHighlight.Name = "AselsanHitboxHighlight"
+							hbHighlight.Adornee = char
+							hbHighlight.FillColor = Color3.fromRGB(255, 0, 0)
+							hbHighlight.FillTransparency = 0.4
+							hbHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+							hbHighlight.OutlineTransparency = 0
+							hbHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+							hbHighlight.Parent = char
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if hitbox2Active then
+		local sizeVal2 = tonumber(hitbox2SizeBox.Text) or 7
+		for _, otherPlayer in pairs(Players:GetPlayers()) do
+			if otherPlayer ~= player and otherPlayer.Character then
+				local char = otherPlayer.Character
+				local head = char:FindFirstChild("Head")
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				
+				if head and hum then
+					if not isEnemy(otherPlayer) or hum.Health <= 0 then
+						head.Size = Vector3.new(2, 1, 1)
+						head.Transparency = 0
+						head.CanCollide = true
+						head.CanQuery = true
+						local hl2 = char:FindFirstChild("AselsanHitbox2Highlight")
+						if hl2 then hl2:Destroy() end
+					else
+						head.Size = Vector3.new(sizeVal2, sizeVal2, sizeVal2)
+						head.Transparency = 0.5
+						head.Color = Color3.fromRGB(0, 150, 255)
+						head.Material = Enum.Material.ForceField
+						head.CanCollide = false
+						head.CanQuery = true 
+						head.Massless = true
+						head.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+						
+						if not char:FindFirstChild("AselsanHitbox2Highlight") then
+							local hb2Highlight = Instance.new("Highlight")
+							hb2Highlight.Name = "AselsanHitbox2Highlight"
+							hb2Highlight.Adornee = char
+							hb2Highlight.FillColor = Color3.fromRGB(0, 150, 255)
+							hb2Highlight.FillTransparency = 0.4
+							hb2Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+							hb2Highlight.OutlineTransparency = 0
+							hb2Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+							hb2Highlight.Parent = char
+						end
+					end
+				end
+			end
+		end
+	end
+end)
+
+local oldRaycast
+oldRaycast = hookfunction(Workspace.Raycast, function(self, origin, direction, raycastParams)
+	if hitbox2Active then
+		if not raycastParams then
+			raycastParams = RaycastParams.new()
+		end
+		local currentFilter = raycastParams.FilterDescendantsInstances
+		local newFilter = {}
+		if currentFilter then
+			for _, v in pairs(currentFilter) do
+				table.insert(newFilter, v)
+			end
+		end
+	end
+	return oldRaycast(self, origin, direction, raycastParams)
+end)
+
+pcall(function()
+	local oldFindPart
+	oldFindPart = hookfunction(Workspace.FindPartOnRay, function(self, ray, ignoreDescendantInstance, terrainCellsAreCubes, ignoreWater)
+		return oldFindPart(self, ray, ignoreDescendantInstance, terrainCellsAreCubes, ignoreWater)
+	end)
+end)
+
+local aimbotEnabled = false
+local aimbotBtn
+local aimbotConn = nil
+
+local fovRadius = 150
+local fovCircle = Drawing.new("Circle")
+fovCircle.Visible = false
+fovCircle.Radius = fovRadius
+fovCircle.Color = Color3.fromRGB(255, 255, 255)
+fovCircle.Thickness = 1
+fovCircle.Filled = false
+fovCircle.Transparency = 0.7
+
+local function getBestTargetHead()
+	local myChar = player.Character
+	if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+	local cam = Workspace.CurrentCamera
+	local screenCenter = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+	
+	local bestHead = nil
+	local shortestScreenDist = math.huge
+	
+	for _, p in pairs(Players:GetPlayers()) do
+		-- Sadece karşı takım oyuncularını hedef alacak şekilde filtreliyoruz
+		if p ~= player and isEnemy(p) and p.Character then
+			local hum = p.Character:FindFirstChildOfClass("Humanoid")
+			local head = p.Character:FindFirstChild("Head")
+			if hum and hum.Health > 0 and head then
+				local headScreenPos, onScreen = cam:WorldToViewportPoint(head.Position)
+				if onScreen then
+					local screenDist = (Vector2.new(headScreenPos.X, headScreenPos.Y) - screenCenter).Magnitude
+					if screenDist <= fovRadius and screenDist < shortestScreenDist then
+						shortestScreenDist = screenDist
+						bestHead = head
+					end
+				end
+			end
+		end
+	end
+	
+	return bestHead
+end
+
+aimbotBtn = addButton(pHitbox, "Head Aimbot (Kapalı)", function()
+	aimbotEnabled = not aimbotEnabled
+	if aimbotEnabled then
+		aimbotBtn.Text = "Enemy Head Aimbot (Açık)"
+		fovCircle.Visible = true
+		if aimbotConn then aimbotConn:Disconnect() end
+		
+		aimbotConn = RunService.RenderStepped:Connect(function()
+			if not aimbotEnabled then
+				fovCircle.Visible = false
+				return
+			end
+			
+			local cam = Workspace.CurrentCamera
+			fovCircle.Position = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+			
+			local targetHead = getBestTargetHead()
+			if targetHead then
+				local currentCFrame = cam.CFrame
+				local targetCFrame = CFrame.new(currentCFrame.Position, targetHead.Position)
+				cam.CFrame = currentCFrame:Lerp(targetCFrame, 0.35)
+			end
+		end)
+	else
+		aimbotBtn.Text = "Head Aimbot (Kapalı)"
+		fovCircle.Visible = false
+		if aimbotConn then
+			aimbotConn:Disconnect()
+			aimbotConn = nil
+		end
+	end
+end)
+
+addTab(1, "Anasayfa", "Anasayfa")
+addTab(2, "Main", "Main")
+addTab(3, "Farm", "Farm")
+addTab(4, "ESP", "ESP")
+addTab(5, "Tp", "Tp")
+addTab(6, "Hitbox", "Hitbox")
+
+selectPage("Anasayfa")
+
+local hue = 0
+RunService.RenderStepped:Connect(function(dt)
+	hue = (hue + dt * 0.2) % 1
+	local col = Color3.fromHSV(hue, 1, 1)
+	
+	for _, textObj in pairs(rgbTextParts) do
+		if textObj and textObj.Parent then
+			textObj.TextColor3 = col
+		end
+	end
+end)
